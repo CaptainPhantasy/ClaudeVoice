@@ -34,10 +34,10 @@ class Config:
     def load_from_env(self):
         """Load configuration from environment variables"""
 
-        # LiveKit Configuration
-        self.livekit_url = os.getenv("LIVEKIT_URL", "")
-        self.livekit_api_key = os.getenv("LIVEKIT_API_KEY", "")
-        self.livekit_api_secret = os.getenv("LIVEKIT_API_SECRET", "")
+        # LiveKit Configuration (support both naming conventions)
+        self.livekit_url = os.getenv("LIVEKIT_URL") or os.getenv("LK_URL", "")
+        self.livekit_api_key = os.getenv("LIVEKIT_API_KEY") or os.getenv("LK_API_KEY", "")
+        self.livekit_api_secret = os.getenv("LIVEKIT_API_SECRET") or os.getenv("LK_API_SECRET", "")
 
         # OpenAI Configuration
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")

@@ -16,8 +16,7 @@ from livekit.agents import (
     WorkerOptions,
     cli,
     llm,
-    JobRequest,
-    JobInfo
+    JobRequest
 )
 from livekit.agents.pipeline import VoicePipelineAgent
 from livekit.plugins import openai, silero
@@ -123,11 +122,17 @@ async def entrypoint(ctx: JobContext):
 
     logger.info("Connected to room, initializing voice pipeline")
 
-    # Configure noise cancellation based on call type
+    # Configure noise cancellation based on call type (if available)
     from livekit.agents.pipeline import RoomInputOptions
-    from livekit.plugins.bvc import BVCTelephony, BVC
 
-    noise_cancellation = BVCTelephony() if is_phone_call else BVC()
+    noise_cancellation = None
+    if config.enable_noise_cancellation:
+        try:
+            from livekit.plugins.bvc import BVCTelephony, BVC
+            noise_cancellation = BVCTelephony() if is_phone_call else BVC()
+            logger.info("Noise cancellation enabled")
+        except ImportError:
+            logger.warning("BVC noise cancellation plugin not available - proceeding without it")
 
     # Create voice pipeline agent with optimized settings
     try:
@@ -152,8 +157,8 @@ async def entrypoint(ctx: JobContext):
             ),
             chat_ctx=initial_ctx,
             room_input_opts=RoomInputOptions(
-                noise_cancellation=noise_cancellation if config.enable_noise_cancellation else None
-            )
+                noise_cancellation=noise_cancellation
+            ) if noise_cancellation else None
         )
 
         logger.info("Voice pipeline initialized successfully")
@@ -215,24 +220,36 @@ async def entrypoint(ctx: JobContext):
         logger.info("Agent cancelled, cleaning up")
         await assistant.aclose()
 
-async def request_fnc(req: JobRequest) -> JobInfo:
+async def request_fnc(ctx: JobContext):
     """Handle job requests for explicit dispatch"""
-    logger.info(f"Received job request for room: {req.room.name}")
+    logger.info(f"Received job request for room: {ctx.room.name}")
 
-    # Accept all requests for rooms starting with "call-"
-    if req.room.name.startswith("call-"):
-        return JobInfo(
-            accept=True,
-            metadata={"type": "telephony_call"}
-        )
-
-    # Accept other requests by default
-    return JobInfo(accept=True)
+    # Accept all requests - simplified for new API
+    await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
+    return await entrypoint(ctx)
 
 if __name__ == "__main__":
-    # Load environment variables
+    # Load environment variables from parent directory
     from dotenv import load_dotenv
-    load_dotenv(".env.local")
+    import os
+
+    # Try multiple possible locations for .env.local
+    env_locations = [
+        "../.env.local",  # Parent directory
+        ".env.local",     # Current directory
+        ".env"            # Standard .env file
+    ]
+
+    env_loaded = False
+    for env_path in env_locations:
+        if os.path.exists(env_path):
+            load_dotenv(env_path)
+            logger.info(f"Loaded environment from: {env_path}")
+            env_loaded = True
+            break
+
+    if not env_loaded:
+        logger.warning("No .env file found, using system environment variables")
 
     # Validate configuration
     try:
@@ -249,15 +266,15 @@ if __name__ == "__main__":
     # Configure worker options
     worker_options = WorkerOptions(
         entrypoint_fnc=entrypoint,
-        request_fnc=request_fnc,
-        agent_name=config.agent_name,
-        worker_type="voice",
-        max_idle_time=60,  # Disconnect after 60s of inactivity
-        num_idle_workers=2,  # Keep 2 workers ready
-        max_workers=10  # Scale up to 10 concurrent calls
+        # request_fnc is deprecated in newer versions
+        # agent_name is set differently now
+        # worker_type="voice",
+        # max_idle_time=60,  # Disconnect after 60s of inactivity
+        # num_idle_workers=2,  # Keep 2 workers ready
+        # max_workers=10  # Scale up to 10 concurrent calls
     )
 
-    logger.info(f"Starting ClaudeVoice agent: {worker_options.agent_name}")
+    logger.info(f"Starting ClaudeVoice agent: {config.agent_name}")
 
     # Run the agent
     cli.run_app(worker_options)

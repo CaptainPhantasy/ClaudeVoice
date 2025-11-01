@@ -10,7 +10,7 @@ import {
   AgentClient,
   CreateRoomOptions,
   CreateAgentDispatchOptions
-} from "@livekit/server-sdk";
+} from "livekit-server-sdk";
 import { z } from "zod";
 
 // Environment variables validation
