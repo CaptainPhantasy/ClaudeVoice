@@ -10,7 +10,15 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv('.env.local')
+import sys
+
+# Try to find .env.local
+if os.path.exists('.env.local'):
+    load_dotenv('.env.local')
+elif os.path.exists('../.env.local'):
+    load_dotenv('../.env.local')
+else:
+    print("Warning: .env.local not found")
 
 try:
     from livekit import api
@@ -44,23 +52,26 @@ def generate_test_token(
     if not api_key or not api_secret:
         raise ValueError("Missing LiveKit API credentials in environment")
 
-    # Create access token
+    # Create access token (updated API)
     token = api.AccessToken(
-        api_key=api_key,
-        api_secret=api_secret,
-        identity=identity,
-        ttl=timedelta(hours=ttl_hours),
-        metadata=f'{{"generated_at": "{datetime.now().isoformat()}"}}'
+        api_key,
+        api_secret
     )
 
+    # Set identity and metadata
+    token.identity = identity
+    token.ttl = timedelta(hours=ttl_hours)
+    token.metadata = f'{{"generated_at": "{datetime.now().isoformat()}"}}'
+
     # Add grants (permissions)
-    token.add_grant(api.VideoGrant(
-        room=room_name,
-        room_join=True,
-        can_publish=True,
-        can_subscribe=True,
-        can_publish_data=True
-    ))
+    grant = api.VideoGrant()
+    grant.room = room_name
+    grant.room_join = True
+    grant.can_publish = True
+    grant.can_subscribe = True
+    grant.can_publish_data = True
+
+    token.add_grant(grant)
 
     return token.to_jwt()
 

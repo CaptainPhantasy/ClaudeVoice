@@ -231,25 +231,26 @@ async def request_fnc(ctx: JobContext):
 if __name__ == "__main__":
     # Load environment variables from parent directory
     from dotenv import load_dotenv
+    from pathlib import Path
     import os
 
-    # Try multiple possible locations for .env.local
-    env_locations = [
-        "../.env.local",  # Parent directory
-        ".env.local",     # Current directory
-        ".env"            # Standard .env file
-    ]
+    # Get the absolute path to the parent directory's .env.local
+    current_file = Path(__file__).resolve()
+    parent_dir = current_file.parent.parent
+    env_path = parent_dir / '.env.local'
 
-    env_loaded = False
-    for env_path in env_locations:
-        if os.path.exists(env_path):
-            load_dotenv(env_path)
-            logger.info(f"Loaded environment from: {env_path}")
-            env_loaded = True
-            break
+    # Try to load the .env.local file
+    if env_path.exists():
+        load_dotenv(env_path)
+        logger.info(f"Loaded environment from: {env_path}")
+    else:
+        logger.error(f"Could not find .env.local at {env_path}")
+        logger.error(f"Please ensure .env.local exists in {parent_dir}")
+        exit(1)
 
-    if not env_loaded:
-        logger.warning("No .env file found, using system environment variables")
+    # Reload configuration after loading environment variables
+    from config import Config
+    config = Config()
 
     # Validate configuration
     try:
