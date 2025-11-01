@@ -41,6 +41,12 @@ class Config:
 
         # OpenAI Configuration
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
+        self.openai_assistant_id = os.getenv("OPENAI_ASSISTANT_ID", "")  # <-- ADDED THIS
+
+        # CourtReserve API Configuration
+        self.courtreserve_api_key = os.getenv("COURTRESERVE_API_KEY", "")
+        self.courtreserve_base_url = os.getenv("COURTRESERVE_BASE_URL", "https://api.courtreserve.com")
+        self.courtreserve_org_id = os.getenv("COURTRESERVE_ORG_ID", "11710")
 
         # Model Settings
         self.llm_model = os.getenv("LLM_MODEL", "gpt-4-turbo")
@@ -104,7 +110,9 @@ class Config:
             self.livekit_url,
             self.livekit_api_key,
             self.livekit_api_secret,
-            self.openai_api_key
+            self.openai_api_key,
+            self.courtreserve_api_key,
+            self.openai_assistant_id  # <-- ADDED THIS
         ]
 
         if not all(required):
@@ -117,6 +125,10 @@ class Config:
                 missing.append("LIVEKIT_API_SECRET")
             if not self.openai_api_key:
                 missing.append("OPENAI_API_KEY")
+            if not self.courtreserve_api_key:
+                missing.append("COURTRESERVE_API_KEY")
+            if not self.openai_assistant_id:  # <-- ADDED THIS
+                missing.append("OPENAI_ASSISTANT_ID")
 
             raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
 
