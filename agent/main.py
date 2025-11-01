@@ -29,6 +29,9 @@ from tools.calendar import calendar_tool, check_availability
 from tools.database import database_query
 from tools.voicemail import detect_voicemail
 
+# Import configuration
+from config import config
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -40,9 +43,10 @@ class ClaudeVoiceAgent:
     """Main voice agent class with tool-calling capabilities"""
 
     def __init__(self):
-        self.agent_name = os.getenv("AGENT_NAME", "claudevoice-agent")
+        self.agent_name = config.agent_name
         self.is_telephony = False
         self.call_metadata = {}
+        self.config = config
 
     def get_system_instructions(self, is_phone_call: bool = False) -> str:
         """Get system instructions based on context"""
@@ -129,26 +133,26 @@ async def entrypoint(ctx: JobContext):
     try:
         assistant = VoicePipelineAgent(
             vad=silero.VAD.load(
-                min_speech_duration=0.1,  # Faster response
-                min_silence_duration=0.3 if is_phone_call else 0.5
+                min_speech_duration=config.vad_min_speech_duration,
+                min_silence_duration=config.vad_min_silence_duration_phone if is_phone_call else config.vad_min_silence_duration
             ),
             stt=openai.STT(
-                model="whisper-1",
-                language="en"  # Set to None for auto-detection
+                model=config.stt_model,
+                language=config.stt_language if config.stt_language != "auto" else None
             ),
             llm=openai.LLM(
-                model="gpt-4-turbo",
-                temperature=0.7,
-                max_tokens=150,  # Keep responses concise
+                model=config.llm_model,
+                temperature=config.llm_temperature,
+                max_tokens=config.llm_max_tokens,
             ),
             tts=openai.TTS(
-                model="tts-1",
-                voice="alloy",  # Options: alloy, echo, fable, onyx, nova, shimmer
-                speed=1.0
+                model=config.tts_model,
+                voice=config.tts_voice,
+                speed=config.tts_speed
             ),
             chat_ctx=initial_ctx,
             room_input_opts=RoomInputOptions(
-                noise_cancellation=noise_cancellation
+                noise_cancellation=noise_cancellation if config.enable_noise_cancellation else None
             )
         )
 
@@ -226,20 +230,32 @@ async def request_fnc(req: JobRequest) -> JobInfo:
     return JobInfo(accept=True)
 
 if __name__ == "__main__":
+    # Load environment variables
+    from dotenv import load_dotenv
+    load_dotenv(".env.local")
+
+    # Validate configuration
+    try:
+        config.validate()
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        exit(1)
+
+    # Log configuration
+    logger.info(f"Configuration loaded: {config}")
+    voice_info = config.get_tts_voice_info()
+    logger.info(f"TTS Voice: {voice_info['voice']} - {voice_info['description']}")
+
     # Configure worker options
     worker_options = WorkerOptions(
         entrypoint_fnc=entrypoint,
         request_fnc=request_fnc,
-        agent_name=os.getenv("AGENT_NAME", "claudevoice-agent"),
+        agent_name=config.agent_name,
         worker_type="voice",
         max_idle_time=60,  # Disconnect after 60s of inactivity
         num_idle_workers=2,  # Keep 2 workers ready
         max_workers=10  # Scale up to 10 concurrent calls
     )
-
-    # Load environment variables
-    from dotenv import load_dotenv
-    load_dotenv(".env.local")
 
     logger.info(f"Starting ClaudeVoice agent: {worker_options.agent_name}")
 
