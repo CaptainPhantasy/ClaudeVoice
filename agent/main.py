@@ -20,7 +20,7 @@ from livekit.agents import (
     JobInfo
 )
 from livekit.agents.pipeline import VoicePipelineAgent
-from livekit.plugins import openai, silero, cartesia, assemblyai
+from livekit.plugins import openai, silero
 from livekit.agents.voice_assistant import AssistantCallContext
 
 # Import custom tools
@@ -132,19 +132,18 @@ async def entrypoint(ctx: JobContext):
                 min_speech_duration=0.1,  # Faster response
                 min_silence_duration=0.3 if is_phone_call else 0.5
             ),
-            stt=assemblyai.STT(
-                api_key=os.getenv("ASSEMBLYAI_API_KEY"),
-                sample_rate=16000,
-                word_boost=["Claude", "calendar", "weather", "appointment"]
+            stt=openai.STT(
+                model="whisper-1",
+                language="en"  # Set to None for auto-detection
             ),
             llm=openai.LLM(
                 model="gpt-4-turbo",
                 temperature=0.7,
                 max_tokens=150,  # Keep responses concise
             ),
-            tts=cartesia.TTS(
-                api_key=os.getenv("CARTESIA_API_KEY"),
-                voice="professional-female",  # Or configure as needed
+            tts=openai.TTS(
+                model="tts-1",
+                voice="alloy",  # Options: alloy, echo, fable, onyx, nova, shimmer
                 speed=1.0
             ),
             chat_ctx=initial_ctx,

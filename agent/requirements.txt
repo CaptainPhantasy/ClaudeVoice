@@ -2,8 +2,6 @@
 livekit-agents>=0.6.0
 livekit-plugins-openai>=0.6.0
 livekit-plugins-silero>=0.6.0
-livekit-plugins-cartesia>=0.1.0
-livekit-plugins-assemblyai>=0.1.0
 livekit-plugins-bvc>=0.1.0
 
 # LiveKit SDK
@@ -12,7 +10,6 @@ livekit-rtc>=0.3.0
 
 # AI/ML Dependencies
 openai>=1.0.0
-assemblyai>=0.20.0
 
 # Async Support
 asyncio>=3.4.3

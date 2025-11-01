@@ -36,9 +36,7 @@ A production-ready voice AI agent with telephony integration built on LiveKit's 
 - Node.js ≥20
 - Docker & Docker Compose
 - LiveKit Cloud account
-- OpenAI API key
-- AssemblyAI API key (for STT)
-- Cartesia API key (for TTS)
+- OpenAI API key (for GPT-4, Whisper STT, and TTS)
 
 ## 🚀 Quick Start
 
@@ -93,9 +91,7 @@ Access the playground URL provided by the agent and test voice interactions.
 | `LIVEKIT_URL` | LiveKit Cloud WebSocket URL | Yes |
 | `LIVEKIT_API_KEY` | LiveKit API key | Yes |
 | `LIVEKIT_API_SECRET` | LiveKit API secret | Yes |
-| `OPENAI_API_KEY` | OpenAI API key for GPT-4 | Yes |
-| `ASSEMBLYAI_API_KEY` | AssemblyAI key for STT | Yes |
-| `CARTESIA_API_KEY` | Cartesia key for TTS | Yes |
+| `OPENAI_API_KEY` | OpenAI API key for GPT-4, Whisper STT, and TTS | Yes |
 | `AGENT_NAME` | Agent identifier | No |
 | `WEBHOOK_SECRET` | Webhook signature secret | No |
 
@@ -290,9 +286,7 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 ## 🙏 Acknowledgments
 
 - [LiveKit](https://livekit.io) - Real-time communication infrastructure
-- [OpenAI](https://openai.com) - GPT-4 language model
-- [AssemblyAI](https://assemblyai.com) - Speech-to-text
-- [Cartesia](https://cartesia.ai) - Text-to-speech
+- [OpenAI](https://openai.com) - GPT-4 language model, Whisper STT, and TTS services
 
 ## 📞 Support
 

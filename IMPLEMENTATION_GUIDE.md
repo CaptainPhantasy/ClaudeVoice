@@ -8,9 +8,7 @@ This guide provides step-by-step instructions for implementing the ClaudeVoice p
 
 ### Required Accounts
 - [ ] LiveKit Cloud account (https://cloud.livekit.io)
-- [ ] OpenAI API account (for GPT-4 and Whisper)
-- [ ] AssemblyAI account (for STT)
-- [ ] Cartesia account (for TTS)
+- [ ] OpenAI API account (for GPT-4, Whisper STT, and TTS)
 - [ ] Vercel account (for webhook deployment)
 
 ### Development Environment
@@ -29,7 +27,7 @@ cd agent/
 python -m venv venv
 source venv/bin/activate
 pip install uv
-uv pip install livekit-agents[openai,silero,cartesia,assemblyai]
+uv pip install livekit-agents[openai,silero]
 ```
 
 ### Step 2: Configure Environment
@@ -41,10 +39,8 @@ LK_API_KEY=your_api_key
 LK_API_SECRET=your_api_secret
 LK_URL=wss://your-project.livekit.cloud
 
-# AI Service Keys
+# OpenAI Configuration (for LLM, STT, and TTS)
 OPENAI_API_KEY=your_openai_key
-ASSEMBLYAI_API_KEY=your_assemblyai_key
-CARTESIA_API_KEY=your_cartesia_key
 
 # Agent Configuration
 AGENT_NAME=claudevoice-agent
@@ -58,7 +54,7 @@ AGENT_PORT=8080
 import asyncio
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, llm
 from livekit.agents.pipeline import VoicePipelineAgent
-from livekit.plugins import openai, silero, cartesia, assemblyai
+from livekit.plugins import openai, silero
 
 async def entrypoint(ctx: JobContext):
     # Initialize the agent with system instructions
@@ -79,9 +75,9 @@ async def entrypoint(ctx: JobContext):
     # Create the voice pipeline agent
     assistant = VoicePipelineAgent(
         vad=silero.VAD.load(),
-        stt=assemblyai.STT(),
+        stt=openai.STT(model="whisper-1"),
         llm=openai.LLM(model="gpt-4-turbo"),
-        tts=cartesia.TTS(),
+        tts=openai.TTS(model="tts-1", voice="alloy"),
         chat_ctx=initial_ctx,
     )
 
