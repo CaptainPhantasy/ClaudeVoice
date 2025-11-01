@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.agent
+    container_name: claudevoice-agent
+    restart: unless-stopped
+    env_file:
+      - ../.env.local
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AGENT_MODE=production
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../logs:/app/logs
+    networks:
+      - claudevoice-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  webhook:
+    build:
+      context: ../webhook
+      dockerfile: Dockerfile
+    container_name: claudevoice-webhook
+    restart: unless-stopped
+    env_file:
+      - ../.env.local
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    networks:
+      - claudevoice-network
+    depends_on:
+      - agent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/sip/inbound"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: claudevoice-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - claudevoice-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: claudevoice-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=claudevoice
+      - POSTGRES_USER=claudevoice
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - claudevoice-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U claudevoice"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: claudevoice-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - claudevoice-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: claudevoice-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    networks:
+      - claudevoice-network
+    depends_on:
+      - prometheus
+
+networks:
+  claudevoice-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:
